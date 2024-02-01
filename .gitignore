@@ -1,0 +1,14 @@
+1.db
+analytics.db
+COMMENTS_MAIN.db
+COMMENTS_MAIN.db-journal
+config.py
+def_sql_db_copy.py
+def_work_database_asyncio.py
+def_sql_db_copy.py
+tokens.py
+Comments.db
+
+/csv
+/.idea
+/__pycache__
