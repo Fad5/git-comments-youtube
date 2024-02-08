@@ -3,14 +3,22 @@ import csv
 import os
 import json
 import googleapiclient.discovery
-import googleapiclient.errors as google_errors
-from config import id_chanel, list_token
+import googleapiclient.errors 
+from config import id_chanel, list_token, main_dir
 from read_csv import save
+from info_file import create_dir_if_is_none,create_dir_сhenel_if_is_none
+from get_video_in_chanel import get_file_json
+
+#Создание папки csv если нет
+create_dir_if_is_none(name_dir='csv')
+
+create_dir_сhenel_if_is_none(name_dir=id_chanel)
 
 #Сохранение в список видео которые были уже обработаны
-list_sort_id_video = []
+list_sort_id_video: list = []
 
-list_files = os.listdir(f'csv/{id_chanel}')
+#Получение список файлов которые есть в папке 
+list_files = os.listdir(f'{main_dir}/{id_chanel}')
 
 
 def youtube(video_id:str, token:str, nextPageToken=None):
@@ -40,7 +48,7 @@ def youtube(video_id:str, token:str, nextPageToken=None):
 
 
 # Главная функция
-def main(video_id, token, path='csv/'):
+def main(video_id, token, path=main_dir):
     # Скачиваем комментарии
     print('download comments')
     response = youtube(video_id=video_id, token=token)
@@ -68,8 +76,6 @@ def main(video_id, token, path='csv/'):
                 nextPageToken = response.get("nextPageToken")
                 replies = replies + response.get("items")
                 i += 1
-
-    print(len(replies))  # Отображаем количество скачаных реплаев
 
     # Сохраняем комментарии и реплаи на них в файл csv
     print("Open csv file")
@@ -129,7 +135,7 @@ def video_list():
     Функия придназначена для считывания id видео по которому будет искать комментарии
     return: список id видео 
     """
-    with open(f'csv/{id_chanel}/{id_chanel}_videos.json', 'r') as file:
+    with open(f'{main_dir}/{id_chanel}/{id_chanel}_videos.json', 'r') as file:
         data = json.load(file)
     videos_list = []
     for i in data:
@@ -142,11 +148,15 @@ def get_files():
     Функция для получение существующих csv файлов
     return: список существующих csv файлов в названии id видео 
     """
-    list_filess = os.listdir(f'csv/{id_chanel}')
+    list_files = os.listdir(f'{main_dir}/{id_chanel}')
     list_current_video = []
-    for i in list_filess:
-        element = i[:-4]
-        list_current_video.append(element)
+    list_videos = video_list()
+    for id_videdo in list_videos:
+        current_i = f'{id_videdo}.csv'
+        if current_i in list_files:
+            pass
+        else:
+            list_current_video.append(id_videdo)
     return list_current_video
 
 
@@ -164,31 +174,33 @@ def procent_error(count, count_error):
 
 
 def start():
+    token_number = 0
+    # Создания json файла
+    get_file_json()
     error_count = 0
-    data = video_list()
-    list_videos = get_files()
+    # список id_video
+    data = get_files()
     t = 0
     conut = 0
     len_vi = len(data)
-    print(len_vi)
-    for i in data:
+    for video_id in data:
         t = t + 1
         procent = procent_error(conut, error_count)
-        print(f'{t} of {len_vi}')
-        print(f'Error: {error_count} из {conut}')
-        print(f'Sucessfull: {procent} %')
-        if i in list_videos:
+        print(f'{t} of {len_vi} \nError: {error_count} из {conut} \nSucessfull: {procent} ')
+        try:
+            conut = conut + 1
+            # Добыча информации 
+            main(video_id, list_token[token_number], f'{main_dir}/{id_chanel}/')
+            # Сохранение
+            save(video_id=video_id, id_chanel=id_chanel, path=main_dir)
+
+        except TimeoutError:
+            # Увеличение счеткика ошибок
+            error_count = error_count + 1 
+            # Увеличение индекса в списке при ошибке 
+            token_number = token_number + 1
+            print('TimeoutError')
+            time.sleep(10)
             pass
-        else:
-            try:
-                conut = conut + 1
-                main(i, list_token[-4], f'csv/{id_chanel}/')
-                save(i,f'csv/{id_chanel}/')
-    
-            except TimeoutError:
-                error_count = error_count + 1 
-                print('TimeoutError')
-                time.sleep(10)
-                pass
 
 start()
